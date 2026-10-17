@@ -4,6 +4,10 @@ A tool to browse, modify, and repack resources inside Gaius and GoldHQ single-fi
 
 浏览、修改、重打包 [Gaius](https://github.com/TypeThe0ry/Gaius) 与 GoldHQ 单文件 HTML 中的嵌入式资源。
 
+## Languages / 语言
+
+简体中文 | [English](README_en.md)
+
 ## 简介
 
 `eagler26-editor` 是一个用于编辑**单文件 HTML 客户端**中嵌入式资源的工具。它**自动识别**以下两种格式：
