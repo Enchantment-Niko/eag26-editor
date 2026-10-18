@@ -113,9 +113,16 @@
         </mdui-card>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+    <!-- 引入依赖 -->
     <script src="https://unpkg.com/mdui@2/mdui.global.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+    
+    <!-- 引入语言包、UI组件、Worker代码(作为字符串) -->
     <script src="./js/i18n.js"></script>
-    <script src="./js/app.js"></script>
+    <script src="./js/ui.js"></script>
+    <script src="./js/worker.js"></script>
+    
+    <!-- 引入主逻辑 -->
+    <script src="./js/main.js"></script>
 </body>
 </html>

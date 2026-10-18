@@ -1,263 +1,15 @@
-const G_MAGIC = new Uint8Array([71, 65, 73, 85, 83, 86, 80, 49]);
-const G_KEYS = ['"vanilla":[', "'vanilla':[", 'vanilla:[', '"vanilla": [', "'vanilla': [", 'vanilla: [', '"vanilla" :[', '"vanilla" : [', 'vanilla\t:[', 'vanilla\t: ['];
-const E_DEF_UNSAFE = [0x00, 0x0d, 0x3c, 0x3d, ...Array.from({length: 0x20}, (_, i) => 0x80 + i)];
 const E_A = '__ASSETS__/', E_U = '__AUDIO__/';
+const G_MAGIC = new Uint8Array([71, 65, 73, 85, 83, 86, 80, 49]);
 
 let currentPack = null, currentFmt = null;
 let injectFiles = [];
 let selectedPaths = new Set();
-let allRenderedItems = [];
 
-const workerScript = `
-    importScripts('https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js');
-    
-    const G_MAGIC = new Uint8Array([71, 65, 73, 85, 83, 86, 80, 49]);
-    const G_KEYS = ['"vanilla":[', "'vanilla':[", 'vanilla:[', '"vanilla": [', "'vanilla': [", 'vanilla: [', '"vanilla" :[', '"vanilla" : [', 'vanilla\\t:[', 'vanilla\\t: ['];
-    const E_DEF_UNSAFE = [0x00, 0x0d, 0x3c, 0x3d, ...Array.from({length: 0x20}, (_, i) => 0x80 + i)];
-    const E_A = '__ASSETS__/', E_U = '__AUDIO__/';
-
-    function wLog(msg) { self.postMessage({ type: 'log', msg: '[Worker] ' + msg }); }
-
-    function safeAtob(base64) {
-        let clean = "";
-        for (let i = 0; i < base64.length; i++) {
-            const c = base64.charCodeAt(i);
-            if ((c >= 65 && c <= 90) || (c >= 97 && c <= 122) || (c >= 48 && c <= 57) || c === 43 || c === 47 || c === 61) {
-                clean += base64[i];
-            }
-        }
-        while (clean.length % 4 !== 0) {
-            clean += '=';
-        }
-        try {
-            return atob(clean);
-        } catch (e) {
-            const b64chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-            let buffer = 0, bits = 0;
-            const output = new Uint8Array(Math.floor(clean.length * 3 / 4));
-            let outIdx = 0;
-            for (let i = 0; i < clean.length; i++) {
-                if (clean[i] === '=') break;
-                const idx = b64chars.indexOf(clean[i]);
-                if (idx === -1) continue;
-                buffer = (buffer << 6) | idx;
-                bits += 6;
-                if (bits >= 8) {
-                    bits -= 8;
-                    output[outIdx++] = (buffer >> bits) & 0xFF;
-                }
-            }
-            return new TextDecoder().decode(output.slice(0, outIdx));
-        }
-    }
-
-    const decodeUtf8 = (b) => new TextDecoder('utf-8').decode(b);
-    const encodeUtf8 = (s) => new TextEncoder().encode(s);
-
-    class ECodec {
-        constructor(esc=0x3d, base=0x40, unsafe=E_DEF_UNSAFE) {
-            this.esc = esc; this.base = base; this.unsafe = unsafe;
-            this.rev = new Map(); this.unsafe.forEach((b, i) => this.rev.set(b, base + i));
-        }
-        decode(raw) {
-            if (!raw.includes(this.esc)) return raw;
-            const out = []; let i = 0;
-            while (i < raw.length) {
-                const j = raw.indexOf(this.esc, i);
-                if (j === -1) { out.push(...raw.subarray(i)); break; }
-                out.push(...raw.subarray(i, j));
-                if (j + 1 >= raw.length) break;
-                const k = raw[j + 1] - this.base;
-                out.push((k >= 0 && k < this.unsafe.length) ? this.unsafe[k] : raw[j + 1]);
-                i = j + 2;
-            }
-            return new Uint8Array(out);
-        }
-        encode(data) {
-            const out = [];
-            for (const b of data) {
-                if (this.rev.has(b)) out.push(this.esc, this.rev.get(b));
-                else out.push(b);
-            }
-            return new Uint8Array(out);
-        }
-    }
-
-    function eaglerSum(data) {
-        let s1 = 0, s2 = 0;
-        for (let i = 0; i < data.length; i++) {
-            s1 = (s1 + data[i]) & 0xFFFFFFFF;
-            s2 = (s2 + s1) & 0xFFFFFFFF;
-        }
-        return ((s1 & 0xFFFF) ^ ((s2 << 16) & 0xFFFFFFFF)) >>> 0;
-    }
-
-    function findBracket(text, openPos) {
-        let depth = 0, inStr = false, escape = false;
-        for (let i = openPos; i < text.length; i++) {
-            const c = text[i];
-            if (inStr) {
-                if (escape) escape = false;
-                else if (c === '\\\\') escape = true;
-                else if (c === '"') inStr = false;
-            } else {
-                if (c === '"') inStr = true;
-                else if (c === '[') depth++;
-                else if (c === ']') { depth--; if (depth === 0) return i; }
-            }
-        }
-        return -1;
-    }
-
-    function extractVanilla(html) {
-        for (const key of G_KEYS) {
-            const pos = html.indexOf(key);
-            if (pos === -1) continue;
-            const open = html.indexOf('[', pos);
-            const close = findBracket(html, open);
-            if (close === -1) continue;
-            const body = html.substring(open + 1, close);
-            const chunks = [...body.matchAll(/"([^"]*)"/g)].map(m => m[1]);
-            return { chunks, open, close };
-        }
-        return null;
-    }
-
-    function handleGaius(bytes) {
-        wLog('开始提取 vanilla 数组...');
-        const html = decodeUtf8(bytes);
-        const found = extractVanilla(html);
-        if (!found) throw new Error("Vanilla array not found in HTML.");
-        wLog('提取完成，正在执行 Base64 解码...');
-        
-        let binary = '';
-        for (const c of found.chunks) binary += safeAtob(c);
-        
-        const raw = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i++) {
-            raw[i] = binary.charCodeAt(i);
-        }
-
-        wLog('解码完成，正在执行 Gzip 解压 (pako)...');
-        let dec;
-        try {
-            dec = pako.inflate(raw);
-        } catch (e) {
-            throw new Error("Gzip decompression failed. The extracted data is invalid or corrupted.");
-        }
-
-        if (dec.length < 12 || !dec.slice(0, 8).every((v, i) => v === G_MAGIC[i])) {
-            throw new Error("Invalid GAIUSVP1 magic. The file format is not recognized.");
-        }
-        wLog('解压成功，正在解析文件索引...');
-        
-        const idxLen = new DataView(dec.buffer).getUint32(8, true);
-        const index = JSON.parse(decodeUtf8(dec.slice(12, 12 + idxLen)));
-        const data = dec.slice(12 + idxLen);
-        wLog('Gaius 包解析完成。');
-        return { format: 'gaius', index, data, html, found };
-    }
-
-    function handleEagler(bytes) {
-        wLog('开始解析 Eagler26 HTML...');
-        const html = decodeUtf8(bytes);
-        const metaMatch = html.match(/id="eagler26-offline-meta"[^>]*>(.*?)<\\/script>/s);
-        if (!metaMatch) throw new Error("Eagler26 meta not found");
-        const meta = JSON.parse(metaMatch[1]);
-        const enc = meta.encoding || {};
-        const codec = new ECodec(enc.escape ?? 0x3d, enc.base ?? 0x40, enc.unsafe ?? E_DEF_UNSAFE);
-        
-        const res = {};
-        const pat = /<script type="application\\/x-eagler26-chunk"([^>]*)>(.*?)<\\/script>/gs;
-        let m;
-        const byPath = {};
-        while ((m = pat.exec(html)) !== null) {
-            const r = m[1].match(/data-r="([^"]+)"/);
-            if (r) {
-                const path = r[1];
-                if (!byPath[path]) byPath[path] = [];
-                byPath[path].push(new TextEncoder().encode(m[2]));
-            }
-        }
-        wLog('正在合并 Chunk 数据...');
-        for (const [p, arr] of Object.entries(byPath)) {
-            const raw = new Uint8Array(arr.reduce((a, b) => a + b.length, 0));
-            let off = 0;
-            for (const b of arr) { raw.set(b, off); off += b.length; }
-            res[p] = codec.decode(raw);
-        }
-
-        wLog('正在解析 assets 与 audio 索引...');
-        const assets = { ranges: {}, blob: new Uint8Array(), dirty: {}, deleted: new Set(), new: {}, order: [] };
-        if (res['assets/assets.idx'] && res['assets/assets.bin']) {
-            try {
-                assets.ranges = JSON.parse(decodeUtf8(pako.inflate(res['assets/assets.idx']))).ranges;
-                assets.blob = pako.inflate(res['assets/assets.bin']);
-                assets.order = Object.keys(assets.ranges);
-            } catch(e) {}
-        }
-
-        const audio = { ranges: {}, blobs: {}, dirty: {}, deleted: {}, new: {}, order: {}, names: {} };
-        const groups = [
-            ['sfx', 'audio/sfx-original.idx', 'audio/sfx-original.bin'],
-            ['music', 'audio/music-original.idx', 'audio/music-original.bin'],
-            ['records', 'audio/records-original.idx', 'audio/records-original.bin'],
-            ['sfx-opt', 'audio/sfx-optimized.idx', 'audio/sfx-optimized.bin']
-        ];
-        for (const [lbl, iname, bname] of groups) {
-            if (res[iname] && res[bname]) {
-                try {
-                    let idx = res[iname];
-                    try { idx = pako.inflate(idx); } catch(e) {}
-                    const parsed = JSON.parse(decodeUtf8(idx));
-                    audio.ranges[lbl] = parsed.ranges || parsed;
-                    if (Object.keys(audio.ranges[lbl]).length === 0) continue;
-                    try { audio.blobs[lbl] = pako.inflate(res[bname]); } catch(e) { audio.blobs[lbl] = res[bname]; }
-                    audio.order[lbl] = Object.keys(audio.ranges[lbl]);
-                    audio.names[lbl] = { idx: iname, bin: bname };
-                } catch(e) {}
-            }
-        }
-        wLog('Eagler26 包解析完成。');
-        return { format: 'eagler', meta, codec, res, html, assets, audio };
-    }
-
-    self.onmessage = (e) => {
-        try {
-            const { action, fileData } = e.data;
-            if (action === 'load') {
-                wLog('收到文件数据，开始自动识别格式...');
-                const head = decodeUtf8(fileData.slice(0, 1024 * 1024));
-                let pack, fmt;
-                if (head.includes('x-eagler26-chunk') || head.includes('eagler26-offline-meta')) {
-                    pack = handleEagler(fileData);
-                    fmt = 'eagler';
-                } else if (head.includes('GAIUSVP1') || head.includes('vanilla')) {
-                    pack = handleGaius(fileData);
-                    fmt = 'gaius';
-                } else {
-                    throw new Error("Unrecognized format");
-                }
-                
-                if (pack.assets && pack.assets.deleted) pack.assets.deleted = Array.from(pack.assets.deleted);
-                if (pack.audio && pack.audio.deleted) {
-                    for (const k in pack.audio.deleted) pack.audio.deleted[k] = Array.from(pack.audio.deleted[k]);
-                }
-                
-                self.postMessage({ status: 'ok', pack, fmt });
-            }
-        } catch (err) {
-            wLog('解析发生错误: ' + err.message);
-            self.postMessage({ status: 'error', message: err.message });
-        }
-    };
-`;
-
-const workerBlob = new Blob([workerScript], { type: 'application/javascript' });
+// 使用全局注入的 Worker 代码
+const workerBlob = new Blob([window.WORKER_CODE], { type: 'application/javascript' });
 const workerUrl = URL.createObjectURL(workerBlob);
 let parserWorker = new Worker(workerUrl);
 
-// 主线程这里补上 encodeUtf8，供打包使用
 const encodeUtf8 = (s) => new TextEncoder().encode(s);
 const decodeUtf8 = (b) => new TextDecoder('utf-8').decode(b);
 
@@ -291,7 +43,7 @@ parserWorker.onmessage = (e) => {
         document.getElementById('fileStats').innerText = currentFmt === 'eagler' ? t('formatEagler') : t('formatGaius');
         
         selectedPaths.clear();
-        initTreeDOM();
+        renderTree();
         updateActionButtons();
     } else {
         log(`[X] ${t('unpackError')}: ${message}`);
@@ -299,59 +51,7 @@ parserWorker.onmessage = (e) => {
     }
 };
 
-function log(msg) {
-    const time = new Date().toLocaleTimeString();
-    const lb = document.getElementById('logBox');
-    lb.innerText += `[${time}] ${msg}\n`;
-    lb.scrollTop = lb.scrollHeight;
-    console.log(`[LOG] ${msg}`);
-}
-
-function clearLog() { document.getElementById('logBox').innerText = ''; }
-function copyLog() { navigator.clipboard.writeText(document.getElementById('logBox').innerText); }
-function exportLog() { downloadBlob(new Blob([document.getElementById('logBox').innerText]), 'log.txt'); }
-
-function promptModal(title, defaultValue) {
-    return new Promise((resolve) => {
-        const dialog = document.createElement('mdui-dialog');
-        dialog.innerHTML = `
-            <div slot="headline">${title}</div>
-            <div slot="content">
-                <mdui-text-field class="prompt-input" value="${defaultValue}" variant="outlined" style="width: 100%; margin-top: 8px;"></mdui-text-field>
-            </div>
-            <div slot="actions">
-                <mdui-button variant="text" class="btn-cancel">Cancel</mdui-button>
-                <mdui-button variant="text" class="btn-ok">OK</mdui-button>
-            </div>
-        `;
-        document.body.appendChild(dialog);
-        dialog.open = true;
-        const input = dialog.querySelector('.prompt-input');
-        dialog.querySelector('.btn-cancel').onclick = () => { dialog.open = false; setTimeout(() => dialog.remove(), 300); resolve(null); };
-        dialog.querySelector('.btn-ok').onclick = () => { const val = input.value.trim(); dialog.open = false; setTimeout(() => dialog.remove(), 300); resolve(val); };
-    });
-}
-
-// 严格参考 MDUI 文档实现，使用 slot="action" 和全新的 Dialog 结构
-function confirmModal(title, textList) {
-    return new Promise((resolve) => {
-        const dialog = document.createElement('mdui-dialog');
-        dialog.setAttribute('close-on-overlay-click', '');
-        dialog.innerHTML = `
-            <div slot="headline">${title}</div>
-            <div slot="content" style="max-height: 60vh; overflow: hidden; display: flex; flex-direction: column; width: 100%;">
-                <div class="dialog-content-box" style="overflow-y: auto; flex: 1;">${textList.replace(/\n/g, '<br>')}</div>
-            </div>
-            <mdui-button slot="action" variant="text" class="btn-cancel">Cancel</mdui-button>
-            <mdui-button slot="action" variant="tonal" class="btn-ok">Delete</mdui-button>
-        `;
-        document.body.appendChild(dialog);
-        dialog.open = true;
-        dialog.querySelector('.btn-cancel').onclick = () => { dialog.open = false; setTimeout(() => dialog.remove(), 300); resolve(false); };
-        dialog.querySelector('.btn-ok').onclick = () => { dialog.open = false; setTimeout(() => dialog.remove(), 300); resolve(true); };
-    });
-}
-
+// 这里继续接上上一版的 async function handleFile 等所有的逻辑代码
 async function handleFile(file) {
     document.getElementById('dropText').style.display = 'none';
     document.getElementById('fileInfo').style.display = 'flex';
@@ -394,86 +94,6 @@ function getPaths() {
         }
     }
     return Array.from(ps).sort();
-}
-
-function initTreeDOM() {
-    const list = document.getElementById('treeList');
-    list.innerHTML = '';
-    allRenderedItems = [];
-    
-    const paths = getPaths();
-    
-    for (const p of paths) {
-        const li = document.createElement('div');
-        li.className = 'perf-item';
-        li.setAttribute('data-path', p.toLowerCase());
-        if (selectedPaths.has(p)) li.classList.add('active');
-        
-        const chk = document.createElement('input');
-        chk.type = 'checkbox';
-        chk.checked = selectedPaths.has(p);
-        
-        const span = document.createElement('span');
-        span.className = 'path-text';
-        span.textContent = p;
-        
-        li.appendChild(chk);
-        li.appendChild(span);
-        
-        li.onclick = () => { 
-            const isNowSelected = !selectedPaths.has(p);
-            if (isNowSelected) {
-                selectedPaths.add(p);
-                li.classList.add('active');
-                chk.checked = true;
-            } else {
-                selectedPaths.delete(p);
-                li.classList.remove('active');
-                chk.checked = false;
-            }
-            updateActionButtons();
-        };
-        
-        list.appendChild(li);
-        allRenderedItems.push({ el: li, path: p.toLowerCase() });
-    }
-    
-    filterTree();
-}
-
-// 优化后的防抖搜索，极大缓解卡顿
-let searchTimeout = null;
-function filterTree() {
-    if (searchTimeout) clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => {
-        requestAnimationFrame(() => {
-            const kw = document.getElementById('searchInput').value.toLowerCase().trim();
-            let count = 0;
-            for (const item of allRenderedItems) {
-                if (!kw || item.path.includes(kw)) {
-                    item.el.style.display = 'flex';
-                    count++;
-                } else {
-                    item.el.style.display = 'none';
-                }
-            }
-        });
-    }, 100); // 100ms 防抖
-}
-
-function updateActionButtons() {
-    const len = selectedPaths.size;
-    const isSingle = len === 1;
-    
-    document.getElementById('iconBtnReplace').disabled = !isSingle;
-    document.getElementById('iconBtnRename').disabled = !isSingle;
-    document.getElementById('iconBtnDelete').disabled = len === 0;
-    document.getElementById('iconBtnExport').disabled = len === 0;
-    
-    document.getElementById('btnReplace').disabled = !isSingle;
-    document.getElementById('btnRename').disabled = !isSingle;
-    document.getElementById('btnDelete').disabled = len === 0;
-    document.getElementById('btnExpSel').disabled = len === 0;
 }
 
 function readFile(p) {
@@ -555,7 +175,7 @@ function addFile() {
         const path = await promptModal('Pack Path:', file.name);
         if (!path) return;
         writeFile(path, data);
-        initTreeDOM();
+        renderTree();
         log(`[Added] ${path}`);
     };
     input.click();
@@ -589,7 +209,7 @@ async function renameFile() {
     selectedPaths.clear();
     selectedPaths.add(n);
     
-    initTreeDOM();
+    renderTree();
     updateActionButtons();
     log(`[Renamed] ${p} -> ${n}`);
 }
@@ -602,7 +222,7 @@ async function deleteFile() {
         deleteFileByPath(p);
     }
     selectedPaths.clear();
-    initTreeDOM();
+    renderTree();
     updateActionButtons();
     log(`[Deleted] ${pArray.length} file(s)`);
 }
@@ -672,14 +292,6 @@ function renderInject() {
         li.style.padding = '4px 0';
         ul.appendChild(li);
     });
-}
-
-function downloadBlob(blob, name) {
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = name;
-    a.click();
-    URL.revokeObjectURL(a.href);
 }
 
 function rebuildGaiusHtml() {
@@ -821,6 +433,7 @@ async function savePack() {
     }
 }
 
+// 事件绑定
 document.getElementById('dropZone').onclick = () => document.getElementById('fileInput').click();
 document.getElementById('fileInput').onchange = (e) => {
     if (!e.target.files.length) return;
