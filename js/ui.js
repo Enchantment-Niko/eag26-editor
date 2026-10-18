@@ -98,8 +98,8 @@ function promptModal(title, defaultValue) {
                 <mdui-text-field class="prompt-input" value="${defaultValue}" variant="outlined" style="width: 100%; margin-top: 8px;"></mdui-text-field>
             </div>
             <div slot="actions">
-                <mdui-button variant="text" class="btn-cancel">Cancel</mdui-button>
-                <mdui-button variant="text" class="btn-ok">OK</mdui-button>
+                <mdui-button variant="text" class="btn-cancel">${t('btnCancel') || 'Cancel'}</mdui-button>
+                <mdui-button variant="text" class="btn-ok">${t('btnOk') || 'OK'}</mdui-button>
             </div>
         `;
         document.body.appendChild(dialog);
@@ -119,8 +119,8 @@ function confirmModal(title, textList) {
             <div slot="content" style="max-height: 60vh; overflow: hidden; display: flex; flex-direction: column; width: 100%;">
                 <div class="dialog-content-box" style="overflow-y: auto; flex: 1;">${textList.replace(/\n/g, '<br>')}</div>
             </div>
-            <mdui-button slot="action" variant="text" class="btn-cancel">Cancel</mdui-button>
-            <mdui-button slot="action" variant="tonal" class="btn-ok">Delete</mdui-button>
+            <mdui-button slot="action" variant="text" class="btn-cancel">${t('btnCancel') || 'Cancel'}</mdui-button>
+            <mdui-button slot="action" variant="tonal" class="btn-ok">${t('btnConfirm') || 'Confirm'}</mdui-button>
         `;
         document.body.appendChild(dialog);
         dialog.open = true;

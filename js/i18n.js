@@ -14,7 +14,8 @@ const I18N = {
         unpackError: "解包失败", repackSuccess: "重打包成功，准备下载", deleteConfirm: "确认删除以下文件？\n\n",
         placeholderFilter: "过滤...", labelOutputName: "输出文件名", labelInjectPrefix: "目标前缀",
         msgZh: "已切换至简体中文", msgEn: "Switched to English", undo: "撤销",
-        tooltipReplace: "替换", tooltipRename: "重命名", tooltipDelete: "删除", tooltipExport: "导出"
+        tooltipReplace: "替换", tooltipRename: "重命名", tooltipDelete: "删除", tooltipExport: "导出",
+        btnCancel: "取消", btnConfirm: "确认"
     },
     en: {
         appTitle: "Gaius / Eagler26 Editor (Online Version)",
@@ -31,7 +32,8 @@ const I18N = {
         unpackError: "Unpack failed", repackSuccess: "Repack success, preparing download", deleteConfirm: "Confirm delete?\n\n",
         placeholderFilter: "Filter...", labelOutputName: "Output Filename", labelInjectPrefix: "Target Prefix",
         msgZh: "已切换至简体中文", msgEn: "Switched to English", undo: "Undo",
-        tooltipReplace: "Replace", tooltipRename: "Rename", tooltipDelete: "Delete", tooltipExport: "Export"
+        tooltipReplace: "Replace", tooltipRename: "Rename", tooltipDelete: "Delete", tooltipExport: "Export",
+        btnCancel: "Cancel", btnConfirm: "Confirm"
     }
 };
 
