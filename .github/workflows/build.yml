@@ -1,0 +1,42 @@
+name: Build & Upload CN to Releases
+
+on:
+  schedule:
+    - cron: '0 20 * * *' # 每天 UTC 20:00（北京时间次日凌晨 4:00）自动运行
+  workflow_dispatch: # 允许随时手动点击运行
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write 
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run Build Script (汉化注入)
+        run: node scripts/build.js
+
+      - name: Upload to Releases (发布到 Releases)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v26.3-CN
+          name: "Gaius 26.3 汉化版"
+          body: |
+            自动构建的 Gaius 26.3 汉化客户端。
+            已替换 `en_us.json` 并注入汉化文本。
+            原版更新后，此工作流会自动重新构建并覆盖发布。
+          files: |
+            Gaius-26.3-CN.html
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
