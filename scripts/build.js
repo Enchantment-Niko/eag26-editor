@@ -1,5 +1,10 @@
 const fs = require('fs');
 const pako = require('pako');
+const crypto = require('crypto');
+
+// 你的仓库信息，用来请求 Release API
+const GITHUB_REPO = 'Enchantment-Niko/eag26-editor'; 
+const RELEASE_TAG = 'v26.3-CN';
 
 async function fetchBuffer(url) {
     console.log(`下载中: ${url}`);
@@ -28,35 +33,54 @@ async function getGaius263Url() {
     throw new Error('未找到 Gaius 26.3 的 HTML 文件！');
 }
 
+// 获取旧 Release 里的 SHA256
+async function getPreviousSha() {
+    console.log('正在检查之前的 Release 是否已有 SHA256.txt...');
+    // 这里直接用公开 API 获取最新 Release
+    const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases/tags/${RELEASE_TAG}`, {
+        headers: { 'User-Agent': 'Node.js' }
+    });
+    
+    if (!res.ok) {
+        console.log('未找到之前的 Release，将进行首次构建。');
+        return null;
+    }
+    
+    const releaseData = await res.json();
+    const shaAsset = releaseData.assets.find(a => a.name === 'SHA256.txt');
+    
+    if (!shaAsset) {
+        console.log('之前的 Release 里没有 SHA256.txt，将进行构建。');
+        return null;
+    }
+    
+    // 下载旧 SHA256.txt 的内容
+    const shaRes = await fetch(shaAsset.browser_download_url);
+    const prevSha = (await shaRes.text()).trim();
+    console.log(`找到旧的 SHA256: ${prevSha}`);
+    return prevSha;
+}
+
+// 解包、打包逻辑（不变）
 function unpackGaius(fileBuffer) {
     const html = fileBuffer.toString('latin1');
     const keyPos = html.indexOf('"vanilla":[') !== -1 ? html.indexOf('"vanilla":[') : html.indexOf('vanilla:[');
     if (keyPos === -1) throw new Error("找不到 vanilla 数组");
-
     const open = html.indexOf('[', keyPos);
     let depth = 0, close = -1;
     for (let i = open; i < html.length; i++) {
         if (html[i] === '[') depth++;
-        if (html[i] === ']') {
-            depth--;
-            if (depth === 0) { close = i; break; }
-        }
+        if (html[i] === ']') { depth--; if (depth === 0) { close = i; break; } }
     }
-
     const body = html.substring(open + 1, close);
     const matches = body.match(/"([^"]*)"/g) || [];
     const buffers = matches.map(m => Buffer.from(m.slice(1, -1), 'base64'));
     const combined = Buffer.concat(buffers);
-
     const inflated = pako.inflate(combined);
-    
-    // 【修复 1】将 Uint8Array 转换为 Buffer，以便使用 readUInt32LE
     const inflatedBuf = Buffer.from(inflated.buffer, inflated.byteOffset, inflated.byteLength);
-    
     const idxLen = inflatedBuf.readUInt32LE(8);
     const index = JSON.parse(new TextDecoder('utf-8').decode(inflatedBuf.subarray(12, 12 + idxLen)));
     const data = inflatedBuf.subarray(12 + idxLen);
-
     return { html, index, data, openPos: open, closePos: close };
 }
 
@@ -65,24 +89,35 @@ function repackGaius(pack) {
     const header = Buffer.alloc(12);
     header.write('GAIUSVP1', 0);
     header.writeUInt32LE(idxBytes.length, 8);
-    
     const raw = Buffer.concat([header, idxBytes, pack.data]);
-    
-    // 【修复 2】pako.gzip 返回的是 Uint8Array，Node 的 Buffer.concat 需要 Buffer，转换一下
     const gz = Buffer.from(pako.gzip(raw));
-    
     const chunks = [];
     const CHUNK_SIZE = 8388608;
     for (let i = 0; i < gz.length; i += CHUNK_SIZE) {
         chunks.push(gz.subarray(i, i + CHUNK_SIZE).toString('base64'));
     }
-    
     const newArr = '[\n' + chunks.map(c => `  "${c}"`).join(',\n') + '\n]';
     return Buffer.from(pack.html.substring(0, pack.openPos) + newArr + pack.html.substring(pack.closePos + 1), 'latin1');
 }
 
+
 async function main() {
-    console.log('\n--- 1. 准备汉化数据 ---');
+    console.log('\n--- 1. 检查原版更新 ---');
+    const gaiusUrl = await getGaius263Url();
+    const gaiusBuffer = await fetchBuffer(gaiusUrl);
+    
+    // 计算当前下载的文件的 SHA256
+    const currentSha = crypto.createHash('sha256').update(gaiusBuffer).digest('hex');
+    console.log(`当前原版 SHA256: ${currentSha}`);
+
+    // 对比旧的 SHA256
+    const prevSha = await getPreviousSha();
+    if (prevSha === currentSha) {
+        console.log('✅ 原版没有更新，跳过构建。');
+        process.exit(0); // 退出，Action 不会上传新文件
+    }
+
+    console.log('\n--- 2. 准备汉化数据 ---');
     const zhJsonUrl = 'https://assets.mcasset.cloud/26.3/assets/minecraft/lang/zh_cn.json';
     const zhBuffer = await fetchBuffer(zhJsonUrl);
     let zhObj = JSON.parse(zhBuffer.toString('utf-8'));
@@ -94,9 +129,7 @@ async function main() {
     
     const zhJsonBuffer = Buffer.from(JSON.stringify(zhObj), 'utf-8');
 
-    console.log('\n--- 2. 处理 Gaius 26.3 ---');
-    const gaiusUrl = await getGaius263Url();
-    const gaiusBuffer = await fetchBuffer(gaiusUrl);
+    console.log('\n--- 3. 处理 Gaius 26.3 ---');
     const gaiusPack = unpackGaius(gaiusBuffer);
     
     let foundGaius = false;
@@ -113,7 +146,10 @@ async function main() {
 
     const outGaius = repackGaius(gaiusPack);
     fs.writeFileSync('./Gaius-26.3-CN.html', outGaius);
-    console.log('✅ 生成文件: Gaius-26.3-CN.html');
+    
+    // 生成 SHA256.txt 供下次比对
+    fs.writeFileSync('./SHA256.txt', currentSha);
+    console.log('✅ 生成文件: Gaius-26.3-CN.html 和 SHA256.txt');
 }
 
 main().catch(err => {
