@@ -20,6 +20,9 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Generate lockfile
+        run: npm install --package-lock-only
+
       - name: Install dependencies
         run: npm install
 
