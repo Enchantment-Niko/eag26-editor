@@ -1,9 +1,6 @@
 const fs = require('fs');
 const pako = require('pako');
 
-// ==========================================
-// 1. 工具函数：下载
-// ==========================================
 async function fetchBuffer(url) {
     console.log(`下载中: ${url}`);
     const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
@@ -11,9 +8,6 @@ async function fetchBuffer(url) {
     return Buffer.from(await res.arrayBuffer());
 }
 
-// ==========================================
-// 2. 从 API 找最新 26.3
-// ==========================================
 async function getGaius263Url() {
     console.log('正在查询 Gaius 最新 26.3 链接...');
     const res = await fetch('https://api.github.com/repos/TypeThe0ry/Gaius/releases', {
@@ -34,9 +28,6 @@ async function getGaius263Url() {
     throw new Error('未找到 Gaius 26.3 的 HTML 文件！');
 }
 
-// ==========================================
-// 3. Gaius 解包与打包
-// ==========================================
 function unpackGaius(fileBuffer) {
     const html = fileBuffer.toString('latin1');
     const keyPos = html.indexOf('"vanilla":[') !== -1 ? html.indexOf('"vanilla":[') : html.indexOf('vanilla:[');
@@ -58,9 +49,13 @@ function unpackGaius(fileBuffer) {
     const combined = Buffer.concat(buffers);
 
     const inflated = pako.inflate(combined);
-    const idxLen = inflated.readUInt32LE(8);
-    const index = JSON.parse(new TextDecoder('utf-8').decode(inflated.subarray(12, 12 + idxLen)));
-    const data = inflated.subarray(12 + idxLen);
+    
+    // 【修复 1】将 Uint8Array 转换为 Buffer，以便使用 readUInt32LE
+    const inflatedBuf = Buffer.from(inflated.buffer, inflated.byteOffset, inflated.byteLength);
+    
+    const idxLen = inflatedBuf.readUInt32LE(8);
+    const index = JSON.parse(new TextDecoder('utf-8').decode(inflatedBuf.subarray(12, 12 + idxLen)));
+    const data = inflatedBuf.subarray(12 + idxLen);
 
     return { html, index, data, openPos: open, closePos: close };
 }
@@ -72,6 +67,8 @@ function repackGaius(pack) {
     header.writeUInt32LE(idxBytes.length, 8);
     
     const raw = Buffer.concat([header, idxBytes, pack.data]);
+    
+    // 【修复 2】pako.gzip 返回的是 Uint8Array，Node 的 Buffer.concat 需要 Buffer，转换一下
     const gz = Buffer.from(pako.gzip(raw));
     
     const chunks = [];
@@ -84,11 +81,7 @@ function repackGaius(pack) {
     return Buffer.from(pack.html.substring(0, pack.openPos) + newArr + pack.html.substring(pack.closePos + 1), 'latin1');
 }
 
-// ==========================================
-// 4. 主流程
-// ==========================================
 async function main() {
-    // A. 准备汉化数据
     console.log('\n--- 1. 准备汉化数据 ---');
     const zhJsonUrl = 'https://assets.mcasset.cloud/26.3/assets/minecraft/lang/zh_cn.json';
     const zhBuffer = await fetchBuffer(zhJsonUrl);
@@ -101,7 +94,6 @@ async function main() {
     
     const zhJsonBuffer = Buffer.from(JSON.stringify(zhObj), 'utf-8');
 
-    // B. 处理 Gaius
     console.log('\n--- 2. 处理 Gaius 26.3 ---');
     const gaiusUrl = await getGaius263Url();
     const gaiusBuffer = await fetchBuffer(gaiusUrl);
