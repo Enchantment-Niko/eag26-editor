@@ -2,8 +2,8 @@ name: Build & Upload CN to Releases
 
 on:
   schedule:
-    - cron: '0 20 * * *' # 每天定时
-  workflow_dispatch: # 允许手动
+    - cron: '0 20 * * *' 
+  workflow_dispatch:
 
 jobs:
   build:
@@ -20,13 +20,13 @@ jobs:
         with:
           node-version: '20'
 
-      # 直接强制安装 pako，绕开任何依赖锁文件
       - name: Install dependencies
         run: npm install pako
 
       - name: Run Build Script
         run: node scripts/build.js
 
+      # 上传两个文件
       - name: Upload to Releases
         uses: softprops/action-gh-release@v2
         with:
@@ -35,5 +35,6 @@ jobs:
           body: "自动构建。已替换 en_us.json 并加入汉化署名。"
           files: |
             Gaius-26.3-CN.html
+            SHA256.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
