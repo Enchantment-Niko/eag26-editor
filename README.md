@@ -186,7 +186,7 @@
 本项目使用 **GPL-3.0** 许可证。详见 [LICENSE](LICENSE)。
 
 ## 版权声明
-Copyright (C) 2026 eag26-editor contributors
+Copyright (C) 2026 Enchantment-Niko
 
 ## 开发说明
 本项目的部分代码与文档由 **DeepSeek AI** 辅助开发。所有 AI 生成内容均经过人工审查、修改与验证。最终代码与文档的正确性、安全性及合规性由项目维护者负责。
