@@ -1,0 +1,49 @@
+body { font-family: system-ui, -apple-system, sans-serif; margin: 0; background-color: var(--mdui-color-surface); padding-bottom: 50px; }
+.workspace { max-width: 1200px; margin: 0 auto; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+.group-box { padding: 16px; }
+.group-title { font-weight: bold; font-size: 14px; margin-bottom: 12px; color: var(--mdui-color-primary); }
+.row { display: flex; align-items: center; gap: 8px; }
+.drop-zone { border: 2px dashed var(--mdui-color-outline); border-radius: 12px; padding: 40px; text-align: center; background-color: var(--mdui-color-surface-container-low); transition: 0.2s; display: flex; flex-direction: column; align-items: center; cursor: pointer; }
+.drop-zone:hover, .drop-zone.dragover { background-color: var(--mdui-color-primary-container); border-color: var(--mdui-color-primary); }
+.editor-layout { display: flex; gap: 16px; height: 500px; }
+.panel-left, .panel-right { flex: 1; display: flex; flex-direction: column; overflow: hidden; padding: 0; }
+.panel-header { padding: 8px 12px; border-bottom: 1px solid var(--mdui-color-outline-variant); display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 14px; background-color: var(--mdui-color-surface-container); }
+.preview-box { flex: 1; margin: 0; padding: 12px; overflow: auto; background: #1e1e1e; color: #d4d4d4; font-family: monospace; font-size: 13px; white-space: pre-wrap; word-break: break-all; }
+.log-box { background: #111; color: #d4d4d4; font-family: monospace; padding: 12px; height: 150px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; font-size: 13px; }
+.inject-list { margin: 8px 0 0 0; padding: 8px; border: 1px solid var(--mdui-color-outline-variant); border-radius: 4px; min-height: 60px; background: var(--mdui-color-surface-container-low); list-style: none; }
+
+/* 极致的性能列表 */
+.perf-list { list-style: none; padding: 0; margin: 0; overflow-y: auto; flex: 1; user-select: none; font-size: 14px; }
+.perf-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--mdui-color-outline-variant);
+    transition: background 0.1s;
+    content-visibility: auto; /* 核心优化：只渲染视口内的元素 */
+    contain-intrinsic-size: 0 37px;
+}
+.perf-item:hover { background-color: var(--mdui-color-surface-container-highest); }
+.perf-item.active { background-color: var(--mdui-color-secondary-container); color: var(--mdui-color-on-secondary-container); }
+.perf-item input[type="checkbox"] {
+    margin-right: 8px;
+    width: 16px;
+    height: 16px;
+    accent-color: var(--mdui-color-primary);
+    pointer-events: none;
+}
+.perf-item .path-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* 修复弹窗滚动条和样式 */
+.dialog-content-box {
+    max-height: 250px;
+    overflow-y: auto;
+    font-family: monospace;
+    font-size: 13px;
+    background: var(--mdui-color-surface-container-low);
+    padding: 12px;
+    border-radius: 8px;
+    word-break: break-all;
+    line-height: 1.5;
+}

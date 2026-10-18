@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eagler26 Editor - Web</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+    <link rel="stylesheet" href="https://unpkg.com/mdui@2/mdui.css">
+    <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+    <mdui-top-app-bar style="position: sticky; top: 0; z-index: 100;">
+        <mdui-top-app-bar-title data-i18n="appTitle">资源编辑器</mdui-top-app-bar-title>
+        <div style="flex-grow: 1"></div>
+        <mdui-tooltip content="Switch Language / 切换语言">
+            <mdui-button-icon icon="translate" onclick="toggleLang()"></mdui-button-icon>
+        </mdui-tooltip>
+    </mdui-top-app-bar>
+
+    <div class="workspace">
+        <mdui-card variant="outlined" class="group-box">
+            <div class="group-title" data-i18n="grp1">1. 文件</div>
+            <div class="drop-zone" id="dropZone">
+                <mdui-icon name="cloud_upload" style="font-size: 48px; color: var(--mdui-color-primary); margin-bottom: 16px;"></mdui-icon>
+                <div id="dropText" data-i18n="dropText" style="margin-bottom: 16px;">点击或拖拽文件到此处</div>
+                <div id="fileInfo" style="display: none; align-items: center; gap: 8px; background: var(--mdui-color-surface-container); padding: 8px 16px; border-radius: 20px;">
+                    <span id="fileName" style="font-weight: bold;"></span>
+                    <mdui-button-icon icon="close" onclick="clearFile(event)"></mdui-button-icon>
+                </div>
+                <input type="file" id="fileInput" style="display: none;" accept=".html,.gz,.bin,.pack">
+            </div>
+            <div class="row" style="margin-top: 16px;">
+                <mdui-text-field id="outputPath" value="modified_pack.html" variant="outlined" style="flex: 1;"></mdui-text-field>
+                <mdui-button id="btnSaveAs" variant="outlined" onclick="savePack()" disabled data-i18n="btnSaveAs">另存为...</mdui-button>
+            </div>
+        </mdui-card>
+
+        <div id="editorPanel" style="display: none; flex-direction: column; gap: 16px;">
+            <mdui-card variant="outlined" class="group-box">
+                <div class="group-title" data-i18n="grp2">2. 选项</div>
+                <mdui-checkbox id="optLocalize" data-i18n="optLocalize">启动器汉化 (仅 Gaius HTML 生效)</mdui-checkbox>
+            </mdui-card>
+
+            <mdui-card variant="outlined" class="group-box">
+                <div class="group-title" data-i18n="grp3">3. 包信息</div>
+                <div id="fileStats" data-i18n="notLoaded">(未加载)</div>
+            </mdui-card>
+
+            <div class="editor-layout" style="height: 600px; display: flex;">
+                <mdui-card variant="outlined" class="panel-left" style="flex: 1;">
+                    <div class="panel-header">
+                        <span data-i18n="grp4">4. 资源列表</span>
+                        <mdui-text-field id="searchInput" variant="outlined" style="flex: 1; margin: 0 8px;" clearable></mdui-text-field>
+                        <div style="display: flex; gap: 4px;">
+                            <mdui-tooltip content="Replace" data-i18n-tooltip="tooltipReplace">
+                                <mdui-button-icon id="iconBtnReplace" icon="edit" onclick="replaceFile()"></mdui-button-icon>
+                            </mdui-tooltip>
+                            <mdui-tooltip content="Rename" data-i18n-tooltip="tooltipRename">
+                                <mdui-button-icon id="iconBtnRename" icon="drive_file_rename_outline" onclick="renameFile()"></mdui-button-icon>
+                            </mdui-tooltip>
+                            <mdui-tooltip content="Delete" data-i18n-tooltip="tooltipDelete">
+                                <mdui-button-icon id="iconBtnDelete" icon="delete" onclick="deleteFile()"></mdui-button-icon>
+                            </mdui-tooltip>
+                            <mdui-tooltip content="Export Selected" data-i18n-tooltip="tooltipExport">
+                                <mdui-button-icon id="iconBtnExport" icon="download" onclick="exportSelected()"></mdui-button-icon>
+                            </mdui-tooltip>
+                        </div>
+                    </div>
+                    <div class="tree-container" style="flex: 1; overflow-y: auto;">
+                        <mdui-list id="treeList"></mdui-list>
+                    </div>
+                </mdui-card>
+            </div>
+
+            <mdui-card variant="outlined" class="group-box">
+                <div class="group-title" data-i18n="grp6">6. 操作</div>
+                <div class="row" style="flex-wrap: wrap; gap: 8px;">
+                    <mdui-button variant="outlined" onclick="addFile()" data-i18n="btnAdd">添加...</mdui-button>
+                    <mdui-button id="btnReplace" variant="outlined" onclick="replaceFile()" data-i18n="btnReplace">替换...</mdui-button>
+                    <mdui-button id="btnRename" variant="outlined" onclick="renameFile()" data-i18n="btnRename">重命名...</mdui-button>
+                    <mdui-button id="btnDelete" variant="outlined" onclick="deleteFile()" data-i18n="btnDelete">删除</mdui-button>
+                    <mdui-button id="btnExpSel" variant="outlined" onclick="exportSelected()" data-i18n="btnExpSel">导出选中...</mdui-button>
+                    <mdui-button variant="outlined" onclick="exportAll()" data-i18n="btnExpAll">导出全部...</mdui-button>
+                    <mdui-button variant="outlined" onclick="exportRaw()" id="btnExportRaw" data-i18n="btnExpRaw">导出裸包...</mdui-button>
+                </div>
+                <div class="row" style="margin-top: 12px;">
+                    <mdui-button variant="filled" onclick="savePack()" style="width: 100%;" data-i18n="btnSave">保存并重打包 (Ctrl+S)</mdui-button>
+                </div>
+            </mdui-card>
+
+            <mdui-card variant="outlined" class="group-box" id="injectPanel">
+                <div class="group-title" data-i18n="grp7">7. IndexedDB 注入 (仅 Gaius HTML 生效)</div>
+                <mdui-text-field id="injectPrefix" value="/gaius/" variant="outlined" style="width: 100%;"></mdui-text-field>
+                <div class="row" style="margin-top: 8px; gap: 8px;">
+                    <mdui-button variant="outlined" onclick="injAdd()" data-i18n="btnInjAdd">添加文件...</mdui-button>
+                    <mdui-button variant="outlined" onclick="injRm()" data-i18n="btnInjRm">移除选中</mdui-button>
+                    <mdui-button variant="outlined" onclick="injClear()" data-i18n="btnInjClear">清空</mdui-button>
+                </div>
+                <ul id="injectList" class="inject-list"></ul>
+            </mdui-card>
+        </div>
+
+        <mdui-card variant="outlined" class="group-box">
+            <div class="group-title" style="display: flex; justify-content: space-between; align-items: center;">
+                <span data-i18n="grp8">8. 日志</span>
+                <div style="display: flex; gap: 8px;">
+                    <mdui-button variant="text" onclick="clearLog()"><mdui-icon slot="icon" name="delete"></mdui-icon><span data-i18n="btnLogClear">清除</span></mdui-button>
+                    <mdui-button variant="text" onclick="copyLog()"><mdui-icon slot="icon" name="content_copy"></mdui-icon><span data-i18n="btnLogCopy">复制</span></mdui-button>
+                    <mdui-button variant="text" onclick="exportLog()"><mdui-icon slot="icon" name="download"></mdui-icon><span data-i18n="btnLogExp">导出</span></mdui-button>
+                </div>
+            </div>
+            <div class="log-box" id="logBox"></div>
+        </mdui-card>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+    <script src="https://unpkg.com/mdui@2/mdui.global.js"></script>
+    <script src="./js/i18n.js"></script>
+    <script src="./js/app.js"></script>
+</body>
+</html>
