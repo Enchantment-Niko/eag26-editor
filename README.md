@@ -176,7 +176,6 @@
 - 修改前请备份原 HTML。
 - **GoldHQ 客户端要求 chunk 顺序与 `take()` 脚本严格对应**，本工具已按原顺序保留。
 - **不要用会改变 HTML 编码的编辑器打开输出文件**（Eagler26 依赖 windows-1252）。
-- **中文字体**：Eagler26 默认不带 unifont，需要自己加。
 - **WASM 字符串**：本工具不处理，需反编译 WASM 单独改。
 - **内存限制**：如果重打包的 HTML 体积过大（如超过 1GB），浏览器可能会内存溢出（OOM）。目前版本在桌面端主流浏览器（Chrome/Edge）测试通过。
 
@@ -186,7 +185,7 @@
 本项目使用 **GPL-3.0** 许可证。详见 [LICENSE](LICENSE)。
 
 ## 版权声明
-Copyright (C) 2026 eag26-editor contributors
+Copyright (C) 2026 Enchantment-Niko
 
 ## 开发说明
 本项目的部分代码与文档由 **DeepSeek AI** 辅助开发。所有 AI 生成内容均经过人工审查、修改与验证。最终代码与文档的正确性、安全性及合规性由项目维护者负责。
