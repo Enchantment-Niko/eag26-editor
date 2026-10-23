@@ -2,7 +2,10 @@
 
 **Try it online: [https://enchantment-niko.github.io/eag26-editor/](https://enchantment-niko.github.io/eag26-editor/)**
 
-A tool to browse, modify, and repack resources inside [Gaius](https://github.com/TypeThe0ry/Gaius) and GoldHQ single-file HTML Minecraft builds.
+A tool to browse, modify, and repack resources inside single-file HTML Minecraft builds (e.g., Gaius, GoldHQ).
+
+> ⚠️ **Important Notice regarding Gaius**
+> Due to a DMCA takedown notice, the original Gaius repository and its Releases have been disabled and removed by GitHub. This tool is purely a local resource parser. **It does NOT host, include, or distribute any game clients or copyright-infringing HTML files.** If you have obtained an HTML file through other means, this tool can still parse and modify it.
 
 ## Languages / 语言
 
@@ -29,7 +32,7 @@ You can **browse, modify, and inject** resources just like a standard resource p
 **This tool does NOT include the client HTML.** You need to download the single-file HTML yourself:
 
 - **GoldHQ Client**: https://client.goldhq.net/
-- **Gaius Releases**: https://github.com/TypeThe0ry/Gaius/releases
+- **Gaius Builds**: Please obtain them through your legally owned backups, mirrors, or community channels.
 
 Once downloaded, simply drag and drop the `.html` file into the web page.
 
@@ -97,7 +100,7 @@ The output is split into two parts: **Head/Tail** (encoded as UTF-8) and **Chunk
 
 ## Important Notes
 
-- **This tool does NOT include the client HTML.**
+- **This tool does NOT include the client HTML.** Please download it from official channels or legal sources.
 - Backup your original HTML.
 - **GoldHQ requires chunk order to strictly match the `take()` script.** This tool preserves it.
 - **Do not open the output file with editors that change HTML encoding.**
@@ -109,6 +112,13 @@ The output is split into two parts: **Head/Tail** (encoded as UTF-8) and **Chunk
 ## License
 This project is licensed under **GPL-3.0**.
 
+## Disclaimer & Copyright
+
+1. **Unofficial Tool**: This project (`eag26-editor`) is an open-source third-party resource editor. It is **not affiliated with, endorsed by, or sponsored by** Mojang Studios, Microsoft, the Gaius developers, or the GoldHQ developers.
+2. **No Copyrighted Content**: This project **does NOT contain** any Minecraft game code, resource files (such as textures or sounds), or pre-built single-file clients (e.g., `Gaius-*.html`, `Eagler26-*.html`). This tool is solely for processing files obtained by the user.
+3. **Compliant Use**: Please ensure you only use this tool on files you **legally own**. The developers of this tool assume no liability for any copyright disputes or legal consequences arising from the use of this tool.
+4. **Trademarks**: Minecraft is a registered trademark of Microsoft Corporation. All related trademarks and copyrights belong to their respective owners.
+
 ## Development Notes
 Parts of the code and documentation for this project were assisted by **DeepSeek AI**.
 
@@ -118,5 +128,4 @@ Parts of the code and documentation for this project were assisted by **DeepSeek
 - Live App: https://enchantment-niko.github.io/eag26-editor/
 - Repository: https://github.com/Enchantment-Niko/eag26-editor
 - GNU GPL v3: https://www.gnu.org/licenses/gpl-3.0.html
-- Gaius Repository: https://github.com/TypeThe0ry/Gaius
 - GoldHQ Client: https://client.goldhq.net/

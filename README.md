@@ -2,7 +2,10 @@
 
 **在线体验：[https://enchantment-niko.github.io/eag26-editor/](https://enchantment-niko.github.io/eag26-editor/)**
 
-浏览、修改、重打包 [Gaius](https://github.com/TypeThe0ry/Gaius) 与 GoldHQ 单文件 HTML 中的嵌入式资源。
+浏览、修改、重打包单文件 HTML 客户端（如 Gaius、GoldHQ）中的嵌入式资源。
+
+> ⚠️ **重要公告：关于 Gaius 仓库**
+> 由于 GitHub 收到 DMCA（数字千年版权法）投诉，原 Gaius 仓库及其 Releases 已被官方封禁下架。本工具是一个纯粹的本地资源解析器，**不包含、不提供、不分发任何游戏本体或客户端 HTML**。如果您已经通过其他渠道获取了相关 HTML 文件，本工具依然可以正常对其进行解析和修改。
 
 ## Languages / 语言
 
@@ -29,7 +32,7 @@
 **本工具不附带客户端 HTML。** 你需要自行获取对应的单文件 HTML：
 
 - **GoldHQ 客户端**: https://client.goldhq.net/
-- **Gaius Releases 构建**: https://github.com/TypeThe0ry/Gaius/releases
+- **Gaius 构建**: 请通过您合法持有的备份、镜像或社群渠道获取。
 
 下载后得到一个 `.html` 文件，直接拖拽到网页中的虚线框，或点击打开即可。
 
@@ -172,7 +175,7 @@
 
 ## 注意事项
 
-- **本工具不附带客户端 HTML**，请自行从官方渠道下载。
+- **本工具不附带客户端 HTML**，请自行从官方渠道或合法途径下载。
 - 修改前请备份原 HTML。
 - **GoldHQ 客户端要求 chunk 顺序与 `take()` 脚本严格对应**，本工具已按原顺序保留。
 - **不要用会改变 HTML 编码的编辑器打开输出文件**（Eagler26 依赖 windows-1252）。
@@ -184,8 +187,12 @@
 ## 许可
 本项目使用 **GPL-3.0** 许可证。详见 [LICENSE](LICENSE)。
 
-## 版权声明
-Copyright (C) 2026 Enchantment-Niko
+## 免责声明与版权 (Disclaimer & Copyright)
+
+1. **非官方工具**：本项目（`eag26-editor`）是一个纯开源的第三方资源编辑器，与 Mojang Studios、Microsoft、Gaius 开发者或 GoldHQ 开发者**没有任何隶属或赞助关系**。
+2. **无版权内容**：本项目**不包含**任何 Minecraft 游戏本体代码、资源文件（如贴图、音效）、或预构建的单文件客户端（如 `Gaius-*.html`、`Eagler26-*.html`）。本工具仅供用户处理其自行获取的文件。
+3. **合规使用**：请确保您仅对**合法持有**的文件使用本工具。所有因使用本工具修改文件而产生的版权纠纷或法律后果，由使用者自行承担，本工具开发者不承担任何连带责任。
+4. **商标声明**：Minecraft 是 Microsoft Corporation 的注册商标。所有相关商标和版权均归其各自所有者所有。
 
 ## 开发说明
 本项目的部分代码与文档由 **DeepSeek AI** 辅助开发。所有 AI 生成内容均经过人工审查、修改与验证。最终代码与文档的正确性、安全性及合规性由项目维护者负责。
@@ -196,5 +203,4 @@ Copyright (C) 2026 Enchantment-Niko
 - 在线工具: https://enchantment-niko.github.io/eag26-editor/
 - 仓库地址: https://github.com/Enchantment-Niko/eag26-editor
 - GNU GPL v3: https://www.gnu.org/licenses/gpl-3.0.html
-- Gaius 仓库: https://github.com/TypeThe0ry/Gaius
 - GoldHQ 客户端: https://client.goldhq.net/
